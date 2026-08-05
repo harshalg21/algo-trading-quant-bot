@@ -1,14 +1,16 @@
 import os
 import sys
+
+# Fix OpenBLAS Memory Allocation Error - MUST BE BEFORE PANDAS/NUMPY IMPORTS
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
+
 import requests
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
-
-# Fix OpenBLAS Windows Memory Allocation Error
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 # Force UTF-8 for console output on Windows
 if hasattr(sys.stdout, 'reconfigure'):
