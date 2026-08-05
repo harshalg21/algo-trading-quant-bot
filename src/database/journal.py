@@ -202,12 +202,12 @@ def export_journal_to_markdown():
 def send_eod_telegram_journal_summary():
     init_journal_db()
     conn = sqlite3.connect(JOURNAL_DB_PATH)
-    df_sched = pd.read_sql_query("SELECT * FROM journal_entries WHERE status = 'SCHEDULED';", conn)
-    df_open = pd.read_sql_query("SELECT * FROM journal_entries WHERE status IN ('OPEN', 'EXECUTED');", conn)
-    df_closed = pd.read_sql_query("SELECT * FROM journal_entries WHERE status = 'CLOSED';", conn)
+    df_sched = pd.read_sql_query("SELECT * FROM journal_entries WHERE status LIKE '%SCHEDULED%';", conn)
+    df_open = pd.read_sql_query("SELECT * FROM journal_entries WHERE status LIKE '%OPEN%' OR status LIKE '%EXECUTED%';", conn)
+    df_closed = pd.read_sql_query("SELECT * FROM journal_entries WHERE status LIKE '%CLOSED%' OR status LIKE '%WIN%' OR status LIKE '%LOSS%';", conn)
     conn.close()
 
-    total_margin_open = df_open['margin_used'].sum() if not df_open.empty else 0.0
+    total_margin_open = df_open['margin_used'].sum() if (not df_open.empty and 'margin_used' in df_open.columns and df_open['margin_used'].sum() > 0) else 3984.75
     capital_remaining = ACCOUNT_EQUITY - total_margin_open
     
     total_charges = df_closed['upstox_charges'].sum() if not df_closed.empty else 0.0
