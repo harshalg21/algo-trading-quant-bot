@@ -2,11 +2,18 @@ import os
 import sqlite3
 import pandas as pd
 import subprocess
+import threading
+import time
 import sys
 from datetime import datetime
 from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
+
+# Fix OpenBLAS Windows/Linux Memory Allocation Error
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
@@ -14,9 +21,32 @@ from src.config import ACCOUNT_EQUITY, DATA_DIR, BASE_DIR
 from src.ai.macro_agent import evaluate_global_macro_risk
 from src.ai.institutional_flow import get_institutional_smart_money_score
 from src.ai.institutional_breakdown import analyze_institutional_asset_allocation
-from src.database.db import get_open_positions
 
 app = FastAPI(title="AlgoTrading Institutional Control Dashboard")
+
+# Background thread starter for scheduler & telegram listener on cloud hosts
+def start_background_services():
+    python_exe = sys.executable
+    
+    # 1. Scheduler
+    sched_path = BASE_DIR / "scripts" / "scheduler.py"
+    try:
+        subprocess.Popen([python_exe, str(sched_path)])
+        print("🟢 Cloud Background Scheduler Started")
+    except Exception as e:
+        print(f"Error starting cloud scheduler: {e}")
+
+    # 2. Telegram Listener
+    listen_path = BASE_DIR / "scripts" / "telegram_listener.py"
+    try:
+        subprocess.Popen([python_exe, str(listen_path)])
+        print("🟢 Cloud Telegram Listener Started")
+    except Exception as e:
+        print(f"Error starting cloud listener: {e}")
+
+@app.on_event("startup")
+def on_startup():
+    threading.Thread(target=start_background_services, daemon=True).start()
 
 @app.get("/api/status")
 def get_dashboard_api_data():
@@ -51,12 +81,13 @@ def get_dashboard_api_data():
     }
 
 @app.post("/api/trigger-job")
+@app.get("/api/cron-daily-job")
 def trigger_daily_job():
     try:
         python_exe = sys.executable
         script_path = BASE_DIR / "scripts" / "automated_daily_job.py"
         subprocess.Popen([python_exe, str(script_path)])
-        return {"status": "SUCCESS", "message": "Daily job triggered in background!"}
+        return {"status": "SUCCESS", "message": "Daily trade scan triggered in background!"}
     except Exception as e:
         return {"status": "ERROR", "message": str(e)}
 
