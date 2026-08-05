@@ -115,8 +115,17 @@ def get_dashboard_api_data():
 
 from scripts.automated_daily_job import main as run_daily_job_task
 
-@app.post("/api/trigger-job")
-@app.get("/api/cron-daily-job")
+@app.get("/api/debug-db")
+def debug_journal_db():
+    try:
+        from src.database.journal import init_journal_db
+        init_journal_db()
+        conn = sqlite3.connect(DATA_DIR / "trading_journal.db")
+        df_j = pd.read_sql_query("SELECT * FROM journal_entries;", conn)
+        conn.close()
+        return {"columns": list(df_j.columns), "records": df_j.to_dict(orient="records")}
+    except Exception as e:
+        return {"error": str(e)}
 def trigger_daily_job():
     try:
         threading.Thread(target=run_daily_job_task, daemon=True).start()
