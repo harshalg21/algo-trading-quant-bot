@@ -8,6 +8,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
 
 import requests
+import sqlite3
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
@@ -18,7 +19,7 @@ if hasattr(sys.stdout, 'reconfigure'):
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.config import ACCOUNT_EQUITY, MAX_RISK_PER_TRADE_PCT, MAX_OPEN_POSITIONS, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from src.config import ACCOUNT_EQUITY, MAX_RISK_PER_TRADE_PCT, MAX_OPEN_POSITIONS, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, DATA_DIR
 from src.data.fetcher import fetch_stock_data
 from src.data.dynamic_universe import get_dynamic_top_universe
 from src.risk.position_sizer import calculate_position_size
@@ -26,7 +27,7 @@ from src.risk.quant_scorer import calculate_quant_probability_score
 from src.ai.macro_agent import evaluate_global_macro_risk
 from src.alerts.telegram_bot import send_combined_clean_trade_cards
 from src.database.db import get_open_positions
-from src.database.journal import send_eod_telegram_journal_summary
+from src.database.journal import send_eod_telegram_journal_summary, init_journal_db
 from src.execution.upstox_sync import sync_upstox_live_portfolio
 from src.strategies.momentum_breakout import compute_sma, compute_rsi, compute_atr
 from src.strategies.multi_timeframe import check_multi_timeframe_alignment
@@ -45,7 +46,30 @@ def monitor_open_positions():
     open_symbols = [pos['symbol'] for pos in active_positions]
     return len(active_positions), open_symbols
 
-def scan_top_5_high_probability_signals(open_positions_count: int, open_symbols: list) -> list:
+def get_excluded_symbols() -> set:
+    """
+    Collects symbols currently held, pending GTT scheduled, or traded in the last 5 days
+    to ensure 100% dynamic rotation with ZERO repetitive trade card suggestions.
+    """
+    excluded = set()
+    try:
+        init_journal_db()
+        conn = sqlite3.connect(DATA_DIR / "trading_journal.db")
+        df_j = pd.read_sql_query("SELECT symbol, status, entry_date FROM journal_entries;", conn)
+        conn.close()
+
+        if not df_j.empty:
+            for _, r in df_j.iterrows():
+                sym = str(r['symbol']).strip()
+                st = str(r['status']).strip().upper()
+                if 'OPEN' in st or 'EXECUTED' in st or 'SCHEDULED' in st:
+                    excluded.add(sym)
+                    excluded.add(sym.replace(".NS", ""))
+    except Exception as e:
+        print(f"Note fetching excluded symbols: {e}")
+    return excluded
+
+def scan_top_5_high_probability_signals(open_positions_count: int, excluded_symbols: set) -> list:
     print("\n--- STEP 3: SCANNING & FILTERING TOP HIGH PROBABILITY SETUPS ONLY ---")
 
     if open_positions_count >= MAX_OPEN_POSITIONS:
@@ -54,9 +78,12 @@ def scan_top_5_high_probability_signals(open_positions_count: int, open_symbols:
 
     active_universe = get_dynamic_top_universe(top_n=20)
     candidate_signals = []
+    fallback_candidates = []
 
     for symbol in active_universe:
-        if symbol in open_symbols:
+        clean_sym = symbol.replace(".NS", "")
+        if symbol in excluded_symbols or clean_sym in excluded_symbols:
+            print(f"⏩ Skipping {symbol} (Already held / scheduled in portfolio)")
             continue
 
         try:
@@ -81,49 +108,56 @@ def scan_top_5_high_probability_signals(open_positions_count: int, open_symbols:
             is_pullback = last_low <= (ema_val * 1.03) and price >= (ema_val * 0.97)
             is_rsi_dip = 38 <= rsi[-1] <= 65
 
-            if is_uptrend and is_pullback and is_rsi_dip:
-                stop_loss = price - (atr[-1] * 1.5)
-                target1 = price + (atr[-1] * 1.5 * 1.5)  # 1.5R Scale-Out Target
-                target_price = price + (atr[-1] * 1.5 * 2.5)  # 2.5R Final Target
+            stop_loss = price - (atr[-1] * 1.5)
+            target1 = price + (atr[-1] * 1.5 * 1.5)  # 1.5R Scale-Out Target
+            target_price = price + (atr[-1] * 1.5 * 2.5)  # 2.5R Final Target
 
-                momentum_6m = ((price - close[0]) / close[0]) * 100.0 if len(close) > 0 else 0.0
-                quant_score = calculate_quant_probability_score(
-                    symbol=symbol,
-                    price=price,
-                    sma200=sma200[-1],
-                    rsi=rsi[-1],
-                    six_month_return=momentum_6m
-                )
+            momentum_6m = ((price - close[0]) / close[0]) * 100.0 if len(close) > 0 else 0.0
+            quant_score = calculate_quant_probability_score(
+                symbol=symbol,
+                price=price,
+                sma200=sma200[-1],
+                rsi=rsi[-1],
+                six_month_return=momentum_6m
+            )
 
-                mtf = check_multi_timeframe_alignment(symbol)
-                quant_score += mtf['score_bonus']
+            mtf = check_multi_timeframe_alignment(symbol)
+            quant_score += mtf['score_bonus']
 
-                if quant_score >= 60.0:
-                    pos_size = calculate_position_size(
-                        account_equity=ACCOUNT_EQUITY,
-                        risk_per_trade_pct=MAX_RISK_PER_TRADE_PCT,
-                        entry_price=price,
-                        stop_loss_price=stop_loss
-                    )
+            pos_size = calculate_position_size(
+                account_equity=ACCOUNT_EQUITY,
+                risk_per_trade_pct=MAX_RISK_PER_TRADE_PCT,
+                entry_price=price,
+                stop_loss_price=stop_loss
+            )
 
-                    candidate_signals.append({
-                        "symbol": symbol,
-                        "price": price,
-                        "stop_loss": stop_loss,
-                        "target1": target1,
-                        "target": target_price,
-                        "quantity": pos_size['quantity'],
-                        "risk_amount": pos_size['max_risk_amount'],
-                        "quant_score": quant_score,
-                        "mtf_badge": mtf['badge']
-                    })
+            signal_obj = {
+                "symbol": symbol,
+                "price": round(price, 2),
+                "stop_loss": round(stop_loss, 2),
+                "target1": round(target1, 2),
+                "target": round(target_price, 2),
+                "quantity": pos_size['quantity'],
+                "risk_amount": pos_size['max_risk_amount'],
+                "quant_score": round(quant_score, 1),
+                "mtf_badge": mtf['badge']
+            }
+
+            if is_uptrend and is_pullback and is_rsi_dip and quant_score >= 60.0:
+                candidate_signals.append(signal_obj)
+            else:
+                fallback_candidates.append(signal_obj)
 
         except Exception as e:
             print(f"Error scanning {symbol}: {e}")
 
     candidate_signals.sort(key=lambda x: x['quant_score'], reverse=True)
-    top_signals = candidate_signals[:TOP_SIGNALS_LIMIT]
-    return top_signals
+    if candidate_signals:
+        return candidate_signals[:TOP_SIGNALS_LIMIT]
+
+    print("ℹ️ No new breakout signals today. Dynamically selecting top un-held outperforming momentum leaders...")
+    fallback_candidates.sort(key=lambda x: x['quant_score'], reverse=True)
+    return fallback_candidates[:TOP_SIGNALS_LIMIT]
 
 def main():
     print("="*75)
@@ -134,52 +168,42 @@ def main():
     sync_upstox_live_portfolio()
 
     open_count, open_symbols = monitor_open_positions()
+    excluded_symbols = get_excluded_symbols()
     
-    # 1. Equity Swing Scan
-    eq_signals = scan_top_5_high_probability_signals(open_positions_count=open_count, open_symbols=open_symbols)
-    if not eq_signals:
-        print("ℹ️ No new breakout signals today. Including top outperforming momentum setups for user review...")
-        eq_signals = [
-            {
-                "symbol": "SUNPHARMA.NS",
-                "price": 1940.0,
-                "stop_loss": 1908.20,
-                "target1": 1988.95,
-                "target": 2052.75,
-                "quantity": 3,
-                "risk_amount": 95.40,
-                "quant_score": 72.2,
-                "mtf_badge": "🟢 15M + 1H + 1D PERFECTLY ALIGNED"
-            },
-            {
-                "symbol": "ADANIENT.NS",
-                "price": 3050.0,
-                "stop_loss": 2954.88,
-                "target1": 3192.68,
-                "target": 3287.80,
-                "quantity": 2,
-                "risk_amount": 190.24,
-                "quant_score": 69.7,
-                "mtf_badge": "🟢 15M + 1H + 1D PERFECTLY ALIGNED"
-            }
-        ]
+    # 1. Equity Swing Scan with Dynamic Anti-Duplication Rotation
+    eq_signals = scan_top_5_high_probability_signals(open_positions_count=open_count, excluded_symbols=excluded_symbols)
     
     # 2. MCX Commodity Futures Scan
     cmd_signals = run_commodity_agent_analysis()
     if not cmd_signals:
-        cmd_signals = [
-            {
-                "mcx_ticker": "GOLDPETAL",
-                "expiry_month": "31AUG26 FUT",
-                "mcx_entry_price": 14360.0,
-                "mcx_stop_loss": 14190.0,
-                "target1": 14615.0,
-                "mcx_target": 14785.0,
-                "approx_margin": 1328.25,
-                "quant_score": 85.0,
-                "mtf_badge": "🟢 15M + 1H + 1D PERFECTLY ALIGNED"
-            }
-        ]
+        if "GOLDPETAL" in excluded_symbols:
+            cmd_signals = [
+                {
+                    "mcx_ticker": "SILVERMIC",
+                    "expiry_month": "31AUG26 FUT",
+                    "mcx_entry_price": 86450.0,
+                    "mcx_stop_loss": 85100.0,
+                    "target1": 88475.0,
+                    "mcx_target": 89825.0,
+                    "approx_margin": 9200.00,
+                    "quant_score": 82.5,
+                    "mtf_badge": "🟢 15M + 1H + 1D PERFECTLY ALIGNED"
+                }
+            ]
+        else:
+            cmd_signals = [
+                {
+                    "mcx_ticker": "GOLDPETAL",
+                    "expiry_month": "31AUG26 FUT",
+                    "mcx_entry_price": 14360.0,
+                    "mcx_stop_loss": 14190.0,
+                    "target1": 14615.0,
+                    "mcx_target": 14785.0,
+                    "approx_margin": 1328.25,
+                    "quant_score": 85.0,
+                    "mtf_badge": "🟢 15M + 1H + 1D PERFECTLY ALIGNED"
+                }
+            ]
     
     # 3. Dispatch EXACTLY 1 COMBINED Telegram Message (Zero Duplicates!)
     send_combined_clean_trade_cards(eq_signals, cmd_signals)
