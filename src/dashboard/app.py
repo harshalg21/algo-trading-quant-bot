@@ -1,3 +1,4 @@
+# Version: 2.1.0 - Resilient Cloud Control Center
 import os
 import sys
 
