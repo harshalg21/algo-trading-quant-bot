@@ -1,4 +1,4 @@
-# Version: 2.1.0 - Resilient Cloud Control Center
+# Version: 2.2.0 - Render MCP Enabled Cloud Control Center
 import os
 import sys
 

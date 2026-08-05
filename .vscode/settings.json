@@ -7,5 +7,12 @@
   "python.autoComplete.extraPaths": [
     "${workspaceFolder}\\venv\\Lib\\site-packages",
     "${workspaceFolder}"
-  ]
+  ],
+  "mcp.servers": {
+    "render": {
+      "url": "https://mcp.render.com/mcp",
+      "type": "http",
+      "clientId": "antigravity"
+    }
+  }
 }

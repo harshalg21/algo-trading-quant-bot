@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "render": {
+      "url": "https://mcp.render.com/mcp",
+      "type": "http",
+      "clientId": "antigravity"
+    }
+  }
+}
