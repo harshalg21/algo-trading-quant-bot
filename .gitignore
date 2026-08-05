@@ -4,7 +4,7 @@
 *.env
 
 # Databases & Local Tracking
-data/
+/data/
 *.db
 *.sqlite3
 
