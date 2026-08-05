@@ -103,14 +103,14 @@ def get_dashboard_api_data():
         "journal_entries": journal_records
     }
 
+from scripts.automated_daily_job import main as run_daily_job_task
+
 @app.post("/api/trigger-job")
 @app.get("/api/cron-daily-job")
 def trigger_daily_job():
     try:
-        python_exe = sys.executable
-        script_path = BASE_DIR / "scripts" / "automated_daily_job.py"
-        subprocess.Popen([python_exe, str(script_path)])
-        return {"status": "SUCCESS", "message": "Daily trade scan triggered in background!"}
+        threading.Thread(target=run_daily_job_task, daemon=True).start()
+        return {"status": "SUCCESS", "message": "Daily trade scan triggered in background thread!"}
     except Exception as e:
         return {"status": "ERROR", "message": str(e)}
 
