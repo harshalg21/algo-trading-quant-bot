@@ -75,7 +75,7 @@ def get_dashboard_api_data():
         if not df_j.empty:
             df_j = df_j.replace({pd.NA: None, float('nan'): None})
             journal_records = df_j.to_dict(orient="records")
-            df_open = df_j[df_j['status'].isin(['OPEN', 'EXECUTED'])]
+            df_open = df_j[df_j['status'].astype(str).str.contains('OPEN|EXECUTED|SCHEDULED', case=False, na=False)]
             margin_blocked = float(df_open['margin_used'].sum()) if not df_open.empty and 'margin_used' in df_open else 0.0
         else:
             journal_records = []
