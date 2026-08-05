@@ -67,16 +67,21 @@ def get_dashboard_api_data():
     except Exception:
         alloc = {"asset_allocation_pct": {"EQUITY": 49.1, "GOLD_SILVER": 8.3, "ENERGY_CRUDE": 42.6}, "sector_leaders": []}
     
-    conn = sqlite3.connect(DATA_DIR / "trading_journal.db")
-    df_j = pd.read_sql_query("SELECT * FROM journal_entries ORDER BY id DESC;", conn)
-    conn.close()
-    
-    if not df_j.empty:
-        df_j = df_j.replace({pd.NA: None, float('nan'): None})
-        journal_records = df_j.to_dict(orient="records")
-        df_open = df_j[df_j['status'].isin(['OPEN', 'EXECUTED'])]
-        margin_blocked = float(df_open['margin_used'].sum()) if not df_open.empty and 'margin_used' in df_open else 0.0
-    else:
+    try:
+        conn = sqlite3.connect(DATA_DIR / "trading_journal.db")
+        df_j = pd.read_sql_query("SELECT * FROM journal_entries ORDER BY id DESC;", conn)
+        conn.close()
+        
+        if not df_j.empty:
+            df_j = df_j.replace({pd.NA: None, float('nan'): None})
+            journal_records = df_j.to_dict(orient="records")
+            df_open = df_j[df_j['status'].isin(['OPEN', 'EXECUTED'])]
+            margin_blocked = float(df_open['margin_used'].sum()) if not df_open.empty and 'margin_used' in df_open else 0.0
+        else:
+            journal_records = []
+            margin_blocked = 0.0
+    except Exception as e:
+        print(f"Journal DB Error on Cloud: {e}")
         journal_records = []
         margin_blocked = 0.0
 
