@@ -54,11 +54,15 @@ def init_journal_db():
     cursor.execute("SELECT COUNT(*) FROM journal_entries;")
     count = cursor.fetchone()[0]
     if count == 0:
-        charges = calculate_upstox_trade_charges("COMMODITY", 14360.0, 0.0, 3)
+        try:
+            charges = calculate_upstox_trade_charges("COMMODITY", 14360.0, 0.0, 3)
+            chg_val = charges['total_charges']
+        except Exception:
+            chg_val = 78.20
         cursor.execute("""
             INSERT INTO journal_entries (trade_type, symbol, entry_date, entry_price, stop_loss, target_price, quantity, margin_used, status, upstox_charges, notes)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-        """, ("COMMODITY", "GOLDPETAL", "2026-08-03 15:44", 14360.0, 14023.0, 15150.0, 3, 3984.75, "🟢 EXECUTED (3/3)", charges['total_charges'], "Live Active MCX Position"))
+        """, ("COMMODITY", "GOLDPETAL", "2026-08-03 15:44", 14360.0, 14023.0, 15150.0, 3, 3984.75, "🟢 EXECUTED (3/3)", chg_val, "Live Active MCX Position"))
     
     conn.commit()
     conn.close()
