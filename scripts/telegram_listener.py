@@ -1,6 +1,14 @@
+import os
+import sys
+
+# Fix OpenBLAS Threading at top
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
+
 import time
 import requests
-import sys
 from pathlib import Path
 
 # Force UTF-8 for console output on Windows

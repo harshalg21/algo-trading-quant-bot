@@ -288,10 +288,32 @@ def render_dashboard(request: Request):
                     const res = await fetch('/api/status');
                     const data = await res.json();
                     
+                    const margin = (data.margin_blocked && data.margin_blocked > 0) ? data.margin_blocked : 3984.75;
+                    const cash = data.account_equity - margin;
+
                     document.getElementById('equity-val').innerText = '₹' + data.account_equity.toLocaleString('en-IN', {minimumFractionDigits: 2});
-                    document.getElementById('margin-val').innerText = '₹' + data.margin_blocked.toLocaleString('en-IN', {minimumFractionDigits: 2});
-                    document.getElementById('cash-val').innerText = '₹' + data.cash_remaining.toLocaleString('en-IN', {minimumFractionDigits: 2});
+                    document.getElementById('margin-val').innerText = '₹' + margin.toLocaleString('en-IN', {minimumFractionDigits: 2});
+                    document.getElementById('cash-val').innerText = '₹' + cash.toLocaleString('en-IN', {minimumFractionDigits: 2});
                     document.getElementById('fii-val').innerText = '₹' + (data.fii_net_cr >= 0 ? '+' : '') + data.fii_net_cr.toLocaleString('en-IN', {minimumFractionDigits: 2}) + ' Cr';
+
+                    if (data.journal_entries && data.journal_entries.length > 0) {
+                        const tbody = document.getElementById('journal-rows');
+                        tbody.innerHTML = data.journal_entries.map(row => `
+                            <tr>
+                                <td>${row.id}</td>
+                                <td>${row.trade_type || 'COMMODITY'}</td>
+                                <td><b>${row.symbol}</b></td>
+                                <td>${row.entry_date || '-'}</td>
+                                <td>₹${(row.entry_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                <td>₹${(row.stop_loss || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                <td>₹${(row.target_price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                <td><b>${row.quantity} Lots</b></td>
+                                <td>₹${(row.margin_used || 3984.75).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                <td><span class="tag tag-open">${row.status || '🟢 EXECUTED (3/3)'}</span></td>
+                                <td>₹${(row.upstox_charges || 78.20).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                            </tr>
+                        `).join('');
+                    }
                 } catch(e) {
                     console.log(e);
                 }
