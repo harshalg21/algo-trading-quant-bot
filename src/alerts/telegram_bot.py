@@ -30,9 +30,9 @@ def send_combined_clean_trade_cards(equity_signals: list, commodity_signals: lis
                 f"   • **REC. QTY**: **{qty} Shares** (Max Risk: ₹{sig['risk_amount']:,.2f})"
             )
             inline_buttons.append([
-                {"text": f"⏳ {sym} GTT SCHEDULED", "callback_data": f"confirm_sched_EQ_{sym}_{price}_{sl}_{t2}_{qty}"},
-                {"text": f"🟢 {sym} EXECUTED", "callback_data": f"confirm_exec_EQ_{sym}_{price}_{sl}_{t2}_{qty}"},
-                {"text": f"❌ SKIP", "callback_data": f"confirm_skipped_{sym}"}
+                {"text": f"⏳ {sym} GTT SCHEDULED", "callback_data": f"cs_EQ_{sym}_{round(price,1)}_{round(sl,1)}_{round(t2,1)}_{qty}"},
+                {"text": f"🟢 {sym} EXECUTED", "callback_data": f"ce_EQ_{sym}_{round(price,1)}_{round(sl,1)}_{round(t2,1)}_{qty}"},
+                {"text": f"❌ SKIP", "callback_data": f"c_skip_{sym}"}
             ])
         sections.append("\n\n".join(eq_text))
 
@@ -58,9 +58,9 @@ def send_combined_clean_trade_cards(equity_signals: list, commodity_signals: lis
                 f"   • **MARGIN REQ**: ₹{margin:,.2f} per lot (Capped under ₹20k)"
             )
             inline_buttons.append([
-                {"text": f"⏳ {name} GTT SCHEDULED (3 Lots)", "callback_data": f"confirm_sched_CMD_{name}_{entry}_{sl}_{t2}_3_{margin*3}"},
-                {"text": f"🟢 {name} EXECUTED (3 Lots)", "callback_data": f"confirm_exec_CMD_{name}_{entry}_{sl}_{t2}_3_{margin*3}"},
-                {"text": f"❌ SKIP", "callback_data": f"confirm_skipped_{name}"}
+                {"text": f"⏳ {name} GTT SCHEDULED (3 Lots)", "callback_data": f"cs_CMD_{name}_{round(entry,1)}_{round(sl,1)}_{round(t2,1)}_3_{round(margin*3,1)}"},
+                {"text": f"🟢 {name} EXECUTED (3 Lots)", "callback_data": f"ce_CMD_{name}_{round(entry,1)}_{round(sl,1)}_{round(t2,1)}_3_{round(margin*3,1)}"},
+                {"text": f"❌ SKIP", "callback_data": f"c_skip_{name}"}
             ])
         sections.append("\n\n".join(cmd_text))
 
@@ -69,7 +69,7 @@ def send_combined_clean_trade_cards(equity_signals: list, commodity_signals: lis
 
     message = (
         "\n\n".join(sections) +
-        f"\n\n👉 *Open Upstox App -> Place Orders -> Tap '⏳ GTT SCHEDULED' or '🟢 EXECUTED'!*"
+        "\n\n👉 Open Upstox App -> Place Orders -> Tap '⏳ GTT SCHEDULED' or '🟢 EXECUTED'!"
     )
 
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
@@ -88,7 +88,23 @@ def send_combined_clean_trade_cards(equity_signals: list, commodity_signals: lis
 
     try:
         res = requests.post(url, json=payload, timeout=10)
-        return res.status_code == 200
+        if res.status_code == 200:
+            print("✅ Combined Equity & Commodity Trade Cards sent to Telegram!")
+            return True
+        else:
+            print(f"⚠️ Telegram Markdown Error ({res.status_code}): {res.text}. Retrying with plain text...")
+            payload_plain = {
+                "chat_id": TELEGRAM_CHAT_ID,
+                "text": message,
+                "reply_markup": {"inline_keyboard": inline_buttons}
+            }
+            res_plain = requests.post(url, json=payload_plain, timeout=10)
+            if res_plain.status_code == 200:
+                print("✅ Combined Trade Cards delivered via Plain Text fallback!")
+                return True
+            else:
+                print(f"❌ Failed to send combined trade cards: {res_plain.text}")
+                return False
     except Exception as e:
         print(f"Failed to send combined trade cards: {e}")
         return False

@@ -65,9 +65,12 @@ def poll_telegram_updates():
                         cb_id = cb["id"]
                         cb_data = cb.get("data", "")
 
-                        if cb_data.startswith("confirm_sched_") or cb_data.startswith("confirm_exec_"):
-                            is_sched = cb_data.startswith("confirm_sched_")
-                            parts = cb_data.split("_")[2:]
+                        if cb_data.startswith(("cs_", "ce_", "confirm_sched_", "confirm_exec_")):
+                            is_sched = cb_data.startswith(("cs_", "confirm_sched_"))
+                            if cb_data.startswith(("cs_", "ce_")):
+                                parts = cb_data.split("_")[1:]
+                            else:
+                                parts = cb_data.split("_")[2:]
                             
                             if len(parts) >= 6:
                                 trade_type = parts[0]
