@@ -68,6 +68,8 @@ def get_dashboard_api_data():
         alloc = {"asset_allocation_pct": {"EQUITY": 49.1, "GOLD_SILVER": 8.3, "ENERGY_CRUDE": 42.6}, "sector_leaders": []}
     
     try:
+        from src.database.journal import init_journal_db
+        init_journal_db()
         conn = sqlite3.connect(DATA_DIR / "trading_journal.db")
         df_j = pd.read_sql_query("SELECT * FROM journal_entries ORDER BY id DESC;", conn)
         conn.close()
