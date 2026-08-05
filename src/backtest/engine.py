@@ -1,6 +1,9 @@
 import json
 import pandas as pd
-from backtesting import Backtest
+try:
+    from backtesting import Backtest
+except ImportError:
+    Backtest = None
 from src.strategies.momentum_breakout import MomentumBreakoutStrategy
 from src.config import RESULTS_DIR
 

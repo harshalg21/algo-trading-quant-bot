@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
-from backtesting import Strategy
+try:
+    from backtesting import Strategy
+except ImportError:
+    class Strategy:
+        pass
 
 def compute_sma(values: np.ndarray, period: int) -> np.ndarray:
     return pd.Series(values).rolling(window=period).mean().to_numpy()
