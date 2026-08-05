@@ -1,0 +1,22 @@
+# Environment variables & API credentials (NEVER PUSH TO GIT)
+.env
+.env.local
+*.env
+
+# Databases & Local Tracking
+data/
+*.db
+*.sqlite3
+
+# Python Cache & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# System & OS files
+.DS_Store
+Thumbs.db
+*.log

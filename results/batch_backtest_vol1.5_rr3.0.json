@@ -1,0 +1,177 @@
+{
+  "Parameters": {
+    "Volume_Multiplier": 1.5,
+    "Risk_Reward_Ratio": 3.0,
+    "ATR_SL_Multiplier": 1.5,
+    "RSI_Range": "50-75"
+  },
+  "Portfolio_Summary": {
+    "Total_Stocks_Tested": 20,
+    "Total_Trades_Executed": 47,
+    "Overall_Win_Rate_Pct": 12.77,
+    "Average_Return_Per_Stock_Pct": -3.98,
+    "Worst_Single_Stock_Drawdown_Pct": -23.66
+  },
+  "Stock_Breakdown": [
+    {
+      "Symbol": "RELIANCE.NS",
+      "Trades": 1,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -1.63,
+      "Max_Drawdown_Pct": -3.34,
+      "Sharpe_Ratio": -0.4
+    },
+    {
+      "Symbol": "HDFCBANK.NS",
+      "Trades": 1,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -2.75,
+      "Max_Drawdown_Pct": -2.75,
+      "Sharpe_Ratio": -0.76
+    },
+    {
+      "Symbol": "ICICIBANK.NS",
+      "Trades": 2,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -5.25,
+      "Max_Drawdown_Pct": -7.05,
+      "Sharpe_Ratio": -0.89
+    },
+    {
+      "Symbol": "INFY.NS",
+      "Trades": 2,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -7.08,
+      "Max_Drawdown_Pct": -7.08,
+      "Sharpe_Ratio": -1.19
+    },
+    {
+      "Symbol": "TCS.NS",
+      "Trades": 0,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": 0.0,
+      "Max_Drawdown_Pct": -0.0,
+      "Sharpe_Ratio": 0.0
+    },
+    {
+      "Symbol": "BHARTIARTL.NS",
+      "Trades": 3,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -7.29,
+      "Max_Drawdown_Pct": -11.87,
+      "Sharpe_Ratio": -0.71
+    },
+    {
+      "Symbol": "LT.NS",
+      "Trades": 1,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -3.89,
+      "Max_Drawdown_Pct": -4.05,
+      "Sharpe_Ratio": -1.13
+    },
+    {
+      "Symbol": "SBIN.NS",
+      "Trades": 4,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -14.94,
+      "Max_Drawdown_Pct": -17.77,
+      "Sharpe_Ratio": -1.51
+    },
+    {
+      "Symbol": "M&M.NS",
+      "Trades": 2,
+      "Win_Rate_Pct": 50.0,
+      "Return_Pct": 6.39,
+      "Max_Drawdown_Pct": -12.23,
+      "Sharpe_Ratio": 0.25
+    },
+    {
+      "Symbol": "AXISBANK.NS",
+      "Trades": 2,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -4.82,
+      "Max_Drawdown_Pct": -4.82,
+      "Sharpe_Ratio": -1.27
+    },
+    {
+      "Symbol": "ITC.NS",
+      "Trades": 1,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -1.8,
+      "Max_Drawdown_Pct": -3.01,
+      "Sharpe_Ratio": -0.51
+    },
+    {
+      "Symbol": "SUNPHARMA.NS",
+      "Trades": 1,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -0.79,
+      "Max_Drawdown_Pct": -4.21,
+      "Sharpe_Ratio": -0.17
+    },
+    {
+      "Symbol": "TITAN.NS",
+      "Trades": 4,
+      "Win_Rate_Pct": 25.0,
+      "Return_Pct": 1.26,
+      "Max_Drawdown_Pct": -7.88,
+      "Sharpe_Ratio": 0.1
+    },
+    {
+      "Symbol": "KOTAKBANK.NS",
+      "Trades": 1,
+      "Win_Rate_Pct": 100.0,
+      "Return_Pct": 7.03,
+      "Max_Drawdown_Pct": -1.31,
+      "Sharpe_Ratio": 1.11
+    },
+    {
+      "Symbol": "HCLTECH.NS",
+      "Trades": 2,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -6.28,
+      "Max_Drawdown_Pct": -6.28,
+      "Sharpe_Ratio": -1.42
+    },
+    {
+      "Symbol": "NTPC.NS",
+      "Trades": 3,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -9.92,
+      "Max_Drawdown_Pct": -9.92,
+      "Sharpe_Ratio": -0.88
+    },
+    {
+      "Symbol": "BAJFINANCE.NS",
+      "Trades": 3,
+      "Win_Rate_Pct": 33.33,
+      "Return_Pct": -1.21,
+      "Max_Drawdown_Pct": -5.89,
+      "Sharpe_Ratio": -0.13
+    },
+    {
+      "Symbol": "ONGC.NS",
+      "Trades": 6,
+      "Win_Rate_Pct": 0.0,
+      "Return_Pct": -23.66,
+      "Max_Drawdown_Pct": -23.66,
+      "Sharpe_Ratio": -2.03
+    },
+    {
+      "Symbol": "ULTRACEMCO.NS",
+      "Trades": 6,
+      "Win_Rate_Pct": 16.67,
+      "Return_Pct": -6.94,
+      "Max_Drawdown_Pct": -15.52,
+      "Sharpe_Ratio": -0.51
+    },
+    {
+      "Symbol": "MARUTI.NS",
+      "Trades": 2,
+      "Win_Rate_Pct": 50.0,
+      "Return_Pct": 3.95,
+      "Max_Drawdown_Pct": -4.39,
+      "Sharpe_Ratio": 0.33
+    }
+  ]
+}
