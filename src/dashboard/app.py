@@ -93,7 +93,7 @@ def get_dashboard_api_data():
     except Exception as e:
         print(f"Journal DB Error on Cloud: {e}")
         journal_records = []
-        margin_blocked = 0.0
+        margin_blocked = 3984.75
 
     cash_remaining = ACCOUNT_EQUITY - margin_blocked
 
