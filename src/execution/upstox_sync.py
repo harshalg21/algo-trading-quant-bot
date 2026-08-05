@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from src.config import ACCOUNT_EQUITY, DATA_DIR, BASE_DIR
 from src.database.journal import init_journal_db, export_journal_to_markdown
 
-UPSTOX_ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN", "")
+UPSTOX_ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN") or "eyJ0eXAiOiJKV1QiLCJrZXlfaWQiOiJza192MS4wIiwiYWxnIjoiSFMyNTYifQ.eyJzdWIiOiIzR0GAPUYiLCJqdGkiOiI2YTcwNTgyMmE5ZTkyOTEyMzY3OTczMWMiLCJpc011bHRpQ2xpZW50IjpmYWxzZSwiaXNQbHVzUGxhbiI6dHJ1ZSwiaXNFeHRlbmRlZCI6dHJ1ZSwiaWF0IjoxNzg1NzQ3NDkwLCJpc3MiOiJ1ZGFwaS1nYXRld2F5LXNlcnZpY2UiLCJleHAiOjE4MTczMzA0MDB9.mvpj3mC8M1qlnSG74sym2TtvuRkW05rO-Xp3waNdewk"
 
 def sync_upstox_live_portfolio():
     """
