@@ -128,9 +128,19 @@ def debug_journal_db():
     except Exception as e:
         return {"error": str(e)}
 
+@app.get("/api/ping")
+def keep_alive_ping():
+    """Lightweight 10-minute keep-alive ping for cron-job.org (Zero Telegram Alerts)"""
+    return {
+        "status": "ACTIVE",
+        "message": "Render web container healthy & awake 24/7",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
 @app.post("/api/trigger-job")
 @app.get("/api/cron-daily-job")
 def trigger_daily_job():
+    """Triggered only at 3:15 PM / 11:30 PM IST or manual UI button click"""
     try:
         threading.Thread(target=run_daily_job_task, daemon=True).start()
         return {"status": "SUCCESS", "message": "Daily trade scan triggered in background thread!"}
