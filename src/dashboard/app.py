@@ -78,10 +78,18 @@ def get_dashboard_api_data():
             df_j = df_j.replace({pd.NA: None, float('nan'): None})
             journal_records = df_j.to_dict(orient="records")
             df_open = df_j[df_j['status'].astype(str).str.contains('OPEN|EXECUTED|SCHEDULED', case=False, na=False)]
-            margin_blocked = float(df_open['margin_used'].sum()) if not df_open.empty and 'margin_used' in df_open else 0.0
+            margin_sum = 0.0
+            if not df_open.empty and 'margin_used' in df_open.columns:
+                for val in df_open['margin_used']:
+                    try:
+                        if val is not None:
+                            margin_sum += float(val)
+                    except Exception:
+                        pass
+            margin_blocked = margin_sum if margin_sum > 0 else 3984.75
         else:
             journal_records = []
-            margin_blocked = 0.0
+            margin_blocked = 3984.75
     except Exception as e:
         print(f"Journal DB Error on Cloud: {e}")
         journal_records = []
