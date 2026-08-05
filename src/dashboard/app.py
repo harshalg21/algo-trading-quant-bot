@@ -126,6 +126,9 @@ def debug_journal_db():
         return {"columns": list(df_j.columns), "records": df_j.to_dict(orient="records")}
     except Exception as e:
         return {"error": str(e)}
+
+@app.post("/api/trigger-job")
+@app.get("/api/cron-daily-job")
 def trigger_daily_job():
     try:
         threading.Thread(target=run_daily_job_task, daemon=True).start()
