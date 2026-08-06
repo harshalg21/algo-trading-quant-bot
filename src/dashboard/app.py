@@ -27,29 +27,7 @@ from src.ai.institutional_breakdown import analyze_institutional_asset_allocatio
 
 app = FastAPI(title="AlgoTrading Institutional Control Dashboard")
 
-# Background thread starter for scheduler & telegram listener on cloud hosts
-def start_background_services():
-    python_exe = sys.executable
-    
-    # 1. Scheduler
-    sched_path = BASE_DIR / "scripts" / "scheduler.py"
-    try:
-        subprocess.Popen([python_exe, str(sched_path)])
-        print("🟢 Cloud Background Scheduler Started")
-    except Exception as e:
-        print(f"Error starting cloud scheduler: {e}")
 
-    # 2. Telegram Listener
-    listen_path = BASE_DIR / "scripts" / "telegram_listener.py"
-    try:
-        subprocess.Popen([python_exe, str(listen_path)])
-        print("🟢 Cloud Telegram Listener Started")
-    except Exception as e:
-        print(f"Error starting cloud listener: {e}")
-
-@app.on_event("startup")
-def on_startup():
-    threading.Thread(target=start_background_services, daemon=True).start()
 
 @app.get("/api/status")
 def get_dashboard_api_data():

@@ -2,6 +2,7 @@ import os
 import time
 import sys
 import subprocess
+import pytz
 from datetime import datetime
 from pathlib import Path
 
@@ -38,7 +39,7 @@ def run_night_eod_job():
 
 def main():
     print("="*75)
-    print(" ⏰ BULLETPROOF DUAL CRON SCHEDULER STARTED")
+    print(" ⏰ BULLETPROOF DUAL CRON SCHEDULER STARTED (Asia/Kolkata IST)")
     print(" • 3:15 PM IST  : Daily Trade Scan (Equity + Commodity)")
     print(" • 11:30 PM IST : Final Night EOD Portfolio & Journal Summary")
     print("="*75 + "\n")
@@ -47,27 +48,32 @@ def main():
     last_night_date = None
 
     while True:
-        now = datetime.now()
-        today_date = now.strftime("%Y-%m-%d")
-        weekday = now.weekday()  # 0=Monday, 4=Friday
-        
-        curr_hour = now.hour
-        curr_min = now.minute
+        try:
+            # Force Asia/Kolkata (IST) timezone regardless of cloud server location
+            now = datetime.now(pytz.timezone("Asia/Kolkata"))
+            today_date = now.strftime("%Y-%m-%d")
+            weekday = now.weekday()  # 0=Monday, 4=Friday
+            
+            curr_hour = now.hour
+            curr_min = now.minute
 
-        if weekday < 5:
-            # 1. Check 3:15 PM Afternoon Scan Trigger (15:15 to 23:29)
-            if (curr_hour == 15 and curr_min >= 15) or (15 < curr_hour < 23):
-                if last_afternoon_date != today_date:
-                    last_afternoon_date = today_date
-                    run_afternoon_job()
+            if weekday < 5:
+                # 1. 3:15 PM IST Afternoon Scan Trigger (STRICT 15:15 to 15:20 IST window)
+                if curr_hour == 15 and 15 <= curr_min <= 20:
+                    if last_afternoon_date != today_date:
+                        last_afternoon_date = today_date
+                        run_afternoon_job()
 
-            # 2. Check 11:30 PM Night EOD Trigger (23:30 to 23:59)
-            if curr_hour == 23 and curr_min >= 30:
-                if last_night_date != today_date:
-                    last_night_date = today_date
-                    run_night_eod_job()
+                # 2. 11:30 PM IST Night EOD Trigger (STRICT 23:30 to 23:35 IST window)
+                if curr_hour == 23 and 30 <= curr_min <= 35:
+                    if last_night_date != today_date:
+                        last_night_date = today_date
+                        run_night_eod_job()
 
-        time.sleep(15)
+        except Exception as e:
+            print(f"[SCHEDULER ERROR]: {e}")
+
+        time.sleep(30)
 
 if __name__ == "__main__":
     main()
