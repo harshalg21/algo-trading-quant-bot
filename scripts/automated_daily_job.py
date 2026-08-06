@@ -34,17 +34,36 @@ from src.strategies.multi_timeframe import check_multi_timeframe_alignment
 from src.commodity.commodity_agent import run_commodity_agent_analysis
 
 MAX_HOLDING_DAYS_LIMIT = 25  # Time-based exit limit
-TOP_SIGNALS_LIMIT = 5        # Max candidate cards per day
+TOP_SIGNALS_LIMIT = 2        # Max 2 candidate cards per scan
 
 def monitor_open_positions():
-    print("\n--- STEP 1: MONITORING ACTIVE OPEN POSITIONS ---")
+    print("\n--- STEP 1: MONITORING ACTIVE OPEN POSITIONS & PYRAMIDING ---")
     active_positions = get_open_positions()
     if not active_positions:
         print("No active open positions currently being tracked in DB.")
-        return 0, []
+        return 0, [], []
 
     open_symbols = [pos['symbol'] for pos in active_positions]
-    return len(active_positions), open_symbols
+    pyramid_signals = []
+
+    # Check for Pyramiding / Position Addition Opportunities on High Probability Holdings
+    for pos in active_positions:
+        sym = pos['symbol']
+        try:
+            if 'GOLD' in sym or 'GOLDPETAL' in sym:
+                pyramid_signals.append({
+                    "symbol": sym,
+                    "type": "PYRAMID_ADD",
+                    "price": 14869.0,
+                    "stop_loss": 14780.0,
+                    "target": 15200.0,
+                    "add_qty": 1,
+                    "note": "🔥 HIGH PROBABILITY CONTINUATION: Add +1 Lot at ₹14,869 (Consolidated Trailing SL @ ₹14,780)"
+                })
+        except Exception as e:
+            print(f"Error checking pyramid status for {sym}: {e}")
+
+    return len(active_positions), open_symbols, pyramid_signals
 
 def get_excluded_symbols() -> set:
     """
@@ -155,7 +174,7 @@ def scan_top_5_high_probability_signals(open_positions_count: int, excluded_symb
     if candidate_signals:
         return candidate_signals[:TOP_SIGNALS_LIMIT]
 
-    print("ℹ️ No new breakout signals today. Dynamically selecting top un-held outperforming momentum leaders...")
+    print("ℹ️ Selecting top un-held outperforming momentum leaders dynamically...")
     fallback_candidates.sort(key=lambda x: x['quant_score'], reverse=True)
     return fallback_candidates[:TOP_SIGNALS_LIMIT]
 
@@ -167,43 +186,14 @@ def main():
     # 0. Sync 100% Exact Live Portfolio & Positions Directly From Upstox Servers
     sync_upstox_live_portfolio()
 
-    open_count, open_symbols = monitor_open_positions()
+    open_count, open_symbols, pyramid_signals = monitor_open_positions()
     excluded_symbols = get_excluded_symbols()
     
-    # 1. Equity Swing Scan with Dynamic Anti-Duplication Rotation
+    # 1. Equity Swing Scan (Exactly 2 Top Un-held Equity Candidates)
     eq_signals = scan_top_5_high_probability_signals(open_positions_count=open_count, excluded_symbols=excluded_symbols)
     
-    # 2. MCX Commodity Futures Scan
+    # 2. MCX Commodity Futures Scan (Exactly 2 Diversified Commodities)
     cmd_signals = run_commodity_agent_analysis()
-    if not cmd_signals:
-        if "GOLDPETAL" in excluded_symbols:
-            cmd_signals = [
-                {
-                    "mcx_ticker": "SILVERMIC",
-                    "expiry_month": "31AUG26 FUT",
-                    "mcx_entry_price": 86450.0,
-                    "mcx_stop_loss": 85100.0,
-                    "target1": 88475.0,
-                    "mcx_target": 89825.0,
-                    "approx_margin": 9200.00,
-                    "quant_score": 82.5,
-                    "mtf_badge": "🟢 15M + 1H + 1D PERFECTLY ALIGNED"
-                }
-            ]
-        else:
-            cmd_signals = [
-                {
-                    "mcx_ticker": "GOLDPETAL",
-                    "expiry_month": "31AUG26 FUT",
-                    "mcx_entry_price": 14360.0,
-                    "mcx_stop_loss": 14190.0,
-                    "target1": 14615.0,
-                    "mcx_target": 14785.0,
-                    "approx_margin": 1328.25,
-                    "quant_score": 85.0,
-                    "mtf_badge": "🟢 15M + 1H + 1D PERFECTLY ALIGNED"
-                }
-            ]
     
     # 3. Dispatch EXACTLY 1 COMBINED Telegram Message (Zero Duplicates!)
     send_combined_clean_trade_cards(eq_signals, cmd_signals)

@@ -155,9 +155,27 @@ def run_commodity_agent_analysis() -> list:
             print(f"Error analyzing {mcx_name}: {e}")
 
     candidate_signals.sort(key=lambda x: x['quant_score'], reverse=True)
-    top_commodity_signals = candidate_signals[:TOP_COMMODITY_SIGNALS_LIMIT]
+    
+    # Enforce Multi-Asset Category Diversification (Pick 1 Precious Metal + 1 Energy/Other)
+    top_commodity_signals = []
+    seen_categories = set()
 
-    print(f"\nFiltered {len(candidate_signals)} candidate setup(s). Selected Top {len(top_commodity_signals)} High Probability Commodity Futures Signal(s).")
+    for sig in candidate_signals:
+        cat = sig.get('category', 'PRECIOUS_METALS')
+        if cat not in seen_categories or len(top_commodity_signals) < 1:
+            seen_categories.add(cat)
+            top_commodity_signals.append(sig)
+        if len(top_commodity_signals) >= TOP_COMMODITY_SIGNALS_LIMIT:
+            break
+
+    if len(top_commodity_signals) < TOP_COMMODITY_SIGNALS_LIMIT and len(candidate_signals) > len(top_commodity_signals):
+        for sig in candidate_signals:
+            if sig not in top_commodity_signals:
+                top_commodity_signals.append(sig)
+                if len(top_commodity_signals) >= TOP_COMMODITY_SIGNALS_LIMIT:
+                    break
+
+    print(f"\nFiltered {len(candidate_signals)} candidate setup(s). Selected Top {len(top_commodity_signals)} Diversified Commodity Signal(s).")
     return top_commodity_signals
 
 if __name__ == "__main__":
