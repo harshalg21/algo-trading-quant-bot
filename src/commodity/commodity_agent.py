@@ -49,7 +49,14 @@ def calculate_recommended_contract_expiry() -> str:
         target_date = now
     return target_date.strftime("%b %Y").upper() + " FUTURES"
 
+all_scanned_commodities_global = []
+
+def get_all_scanned_commodities() -> list:
+    return all_scanned_commodities_global
+
 def run_commodity_agent_analysis() -> list:
+    global all_scanned_commodities_global
+    all_scanned_commodities_global = []
     print("="*75)
     print(f" ⛏️ DEDICATED MCX COMMODITY FUTURES AGENT (UPSTOX LIVE SYNC) ({datetime.now().strftime('%Y-%m-%d %H:%M')})")
     print("="*75)
@@ -139,6 +146,18 @@ def run_commodity_agent_analysis() -> list:
                 qty = 1
 
             total_margin_req = approx_margin * qty
+
+            status_badge = "🟢 QUALIFIED (≥70)" if quant_score >= 70.0 else "⏩ FILTERED (<70)"
+
+            all_scanned_commodities_global.append({
+                "mcx_ticker": mcx_ticker,
+                "mcx_name": mcx_name,
+                "category": category,
+                "approx_margin": round(total_margin_req, 2),
+                "quant_score": round(quant_score, 1),
+                "status_badge": status_badge,
+                "macro_reason": macro_eval['reason']
+            })
 
             # Strict Professional Risk Gate: Only include high-probability setups (Quant Score >= 70.0)
             if quant_score >= 70.0:

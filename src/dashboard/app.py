@@ -148,6 +148,11 @@ def cron_daily_job():
     except Exception as e:
         return {"status": "ERROR", "message": str(e)}
 
+@app.get("/api/market-scans")
+def get_market_scans():
+    from src.database.journal import get_latest_daily_scan
+    return get_latest_daily_scan()
+
 @app.get("/", response_class=HTMLResponse)
 def render_dashboard(request: Request):
     html_content = """
@@ -297,6 +302,58 @@ def render_dashboard(request: Request):
             </table>
         </div>
 
+        <!-- DYNAMIC MARKET SCANNER & QUANT LEADERBOARDS SECTION -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+            
+            <!-- EQUITY LEADERBOARD TABLE -->
+            <div class="card">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>📊 DAILY NSE EQUITY MOMENTUM & QUANT SCORER (TOP 20)</span>
+                    <span id="eq-scan-time" style="font-size: 11px; color: #9ca3af; font-weight: 400;">Updated Live</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Symbol</th>
+                            <th>6M Momentum</th>
+                            <th>Price</th>
+                            <th>RSI</th>
+                            <th>Quant Score</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="equity-scan-rows">
+                        <tr><td colspan="7" style="text-align: center; color: #9ca3af; padding: 20px;">Loading dynamic equity leaderboard...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- COMMODITY SCANNER TABLE -->
+            <div class="card">
+                <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>⛏️ MCX COMMODITY MARKET & MACRO SCANNER</span>
+                    <span id="cmd-scan-time" style="font-size: 11px; color: #9ca3af; font-weight: 400;">Updated Live</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticker</th>
+                            <th>Category</th>
+                            <th>Margin Req.</th>
+                            <th>Macro Flow</th>
+                            <th>Quant Score</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="commodity-scan-rows">
+                        <tr><td colspan="6" style="text-align: center; color: #9ca3af; padding: 20px;">Loading dynamic commodity scanner...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
         <!-- AI FUND MANAGER MODAL DIALOG -->
         <div id="ai-modal" class="modal-overlay">
             <div class="modal-container">
@@ -315,6 +372,61 @@ def render_dashboard(request: Request):
         </div>
 
         <script>
+            async function fetchMarketScans() {
+                try {
+                    const res = await fetch('/api/market-scans');
+                    const data = await res.json();
+
+                    if (data.scan_date) {
+                        document.getElementById('eq-scan-time').innerText = 'Last Scan: ' + data.scan_date;
+                        document.getElementById('cmd-scan-time').innerText = 'Last Scan: ' + data.scan_date;
+                    }
+
+                    // Render Equity Leaderboard
+                    if (data.equity_leaderboard && data.equity_leaderboard.length > 0) {
+                        const tbody = document.getElementById('equity-scan-rows');
+                        tbody.innerHTML = data.equity_leaderboard.map((row, idx) => {
+                            let badgeStyle = "background: rgba(107, 114, 128, 0.2); color: #9ca3af;";
+                            if (row.status_badge.includes('QUALIFIED')) badgeStyle = "background: rgba(16, 185, 129, 0.2); color: #34d399; font-weight: 700;";
+                            if (row.status_badge.includes('HELD')) badgeStyle = "background: rgba(59, 130, 246, 0.2); color: #60a5fa; font-weight: 700;";
+
+                            return `
+                                <tr>
+                                    <td><b>#${idx + 1}</b></td>
+                                    <td><b>${row.clean_symbol}</b></td>
+                                    <td style="color: ${row.momentum_6m >= 0 ? '#34d399' : '#ef4444'}; font-weight: 600;">${row.momentum_6m >= 0 ? '+' : ''}${row.momentum_6m}%</td>
+                                    <td>₹${(row.price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                    <td>${row.rsi || '-'}</td>
+                                    <td><b>${row.quant_score}/100</b></td>
+                                    <td><span style="font-size: 11px; padding: 4px 8px; border-radius: 6px; ${badgeStyle}">${row.status_badge}</span></td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+
+                    // Render Commodity Scanner
+                    if (data.commodity_leaderboard && data.commodity_leaderboard.length > 0) {
+                        const tbody = document.getElementById('commodity-scan-rows');
+                        tbody.innerHTML = data.commodity_leaderboard.map(row => {
+                            let badgeStyle = "background: rgba(107, 114, 128, 0.2); color: #9ca3af;";
+                            if (row.status_badge.includes('QUALIFIED')) badgeStyle = "background: rgba(16, 185, 129, 0.2); color: #34d399; font-weight: 700;";
+
+                            return `
+                                <tr>
+                                    <td><b>${row.mcx_ticker}</b></td>
+                                    <td><span style="font-size: 11px; color: #60a5fa;">${row.category}</span></td>
+                                    <td>₹${(row.approx_margin || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                    <td style="font-size: 11px; color: #9ca3af; max-width: 140px;">${row.macro_reason || 'Macro Flow Balanced'}</td>
+                                    <td><b>${row.quant_score}/100</b></td>
+                                    <td><span style="font-size: 11px; padding: 4px 8px; border-radius: 6px; ${badgeStyle}">${row.status_badge}</span></td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                } catch(e) {
+                    console.log('Error fetching market scans:', e);
+                }
+            }
             async function fetchStatus() {
                 try {
                     const res = await fetch('/api/status');
@@ -476,7 +588,9 @@ def render_dashboard(request: Request):
             }
 
             fetchStatus();
+            fetchMarketScans();
             setInterval(fetchStatus, 15000);
+            setInterval(fetchMarketScans, 30000);
         </script>
     </body>
     </html>

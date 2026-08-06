@@ -35,6 +35,14 @@ def send_combined_clean_trade_cards(equity_signals: list, commodity_signals: lis
                 {"text": f"❌ SKIP", "callback_data": f"c_skip_{sym}"}
             ])
         sections.append("\n\n".join(eq_text))
+    else:
+        sections.append(
+            "====================================\n"
+            "📈 **1. NSE EQUITY SWING TRADE CARDS**\n"
+            "====================================\n"
+            "ℹ️ **Market Status**: No stocks met strict Quant Score (≥70.0) criteria today.\n"
+            "🛡️ *Capital 100% Protected (0 risky trades taken).*"
+        )
 
     # 2. Commodity Section
     if commodity_signals:
@@ -63,9 +71,14 @@ def send_combined_clean_trade_cards(equity_signals: list, commodity_signals: lis
                 {"text": f"❌ SKIP", "callback_data": f"c_skip_{name}"}
             ])
         sections.append("\n\n".join(cmd_text))
-
-    if not sections:
-        return True
+    else:
+        sections.append(
+            "====================================\n"
+            "🥇 **2. MCX COMMODITY FUTURES CARDS**\n"
+            "====================================\n"
+            "ℹ️ **Commodity Status**: MCX contracts currently consolidating (Quant Scores < 70.0).\n"
+            "🛡️ *Capital 100% Protected (0 risky trades taken).*"
+        )
 
     message = (
         "\n\n".join(sections) +

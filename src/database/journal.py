@@ -51,6 +51,20 @@ def init_journal_db():
         cursor.execute("ALTER TABLE journal_entries ADD COLUMN holding_days INTEGER;")
     except Exception:
         pass
+    try:
+        cursor.execute("ALTER TABLE journal_entries ADD COLUMN notes TEXT;")
+    except Exception:
+        pass
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS daily_scans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            scan_date TEXT,
+            equity_json TEXT,
+            commodity_json TEXT
+        );
+    """)
+
     cursor.execute("SELECT COUNT(*) FROM journal_entries;")
     count = cursor.fetchone()[0]
     if count == 0:
@@ -66,6 +80,35 @@ def init_journal_db():
     
     conn.commit()
     conn.close()
+
+def save_daily_scan_results(equity_list: list, commodity_list: list):
+    import json
+    init_journal_db()
+    conn = sqlite3.connect(JOURNAL_DB_PATH)
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute(
+        "INSERT INTO daily_scans (scan_date, equity_json, commodity_json) VALUES (?, ?, ?);",
+        (now_str, json.dumps(equity_list), json.dumps(commodity_list))
+    )
+    conn.commit()
+    conn.close()
+
+def get_latest_daily_scan() -> dict:
+    import json
+    init_journal_db()
+    conn = sqlite3.connect(JOURNAL_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT scan_date, equity_json, commodity_json FROM daily_scans ORDER BY id DESC LIMIT 1;")
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {
+            "scan_date": row[0],
+            "equity_leaderboard": json.loads(row[1]) if row[1] else [],
+            "commodity_leaderboard": json.loads(row[2]) if row[2] else []
+        }
+    return {"scan_date": "No scans run yet", "equity_leaderboard": [], "commodity_leaderboard": []}
 
 def log_trade_to_journal(
     trade_type: str,

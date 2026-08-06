@@ -27,7 +27,7 @@ from src.risk.quant_scorer import calculate_quant_probability_score
 from src.ai.macro_agent import evaluate_global_macro_risk
 from src.alerts.telegram_bot import send_combined_clean_trade_cards
 from src.database.db import get_open_positions
-from src.database.journal import send_eod_telegram_journal_summary, init_journal_db
+from src.database.journal import send_eod_telegram_journal_summary, init_journal_db, save_daily_scan_results
 from src.execution.upstox_sync import sync_upstox_live_portfolio
 from src.strategies.momentum_breakout import compute_sma, compute_rsi, compute_atr
 from src.strategies.multi_timeframe import check_multi_timeframe_alignment
@@ -97,6 +97,7 @@ def scan_top_5_high_probability_signals(open_positions_count: int, excluded_symb
 
     active_universe = get_dynamic_top_universe(top_n=20)
     candidate_signals = []
+    all_equity_leaderboard = []
     fallback_candidates = []
 
     for symbol in active_universe:
@@ -162,21 +163,31 @@ def scan_top_5_high_probability_signals(open_positions_count: int, excluded_symb
                 "mtf_badge": mtf['badge']
             }
 
-            if is_uptrend and is_pullback and is_rsi_dip and quant_score >= 60.0:
+            status_badge = "🟢 QUALIFIED (≥70)" if (is_uptrend and quant_score >= 70.0) else "⏩ FILTERED (<70)"
+            if symbol in excluded_symbols or clean_sym in excluded_symbols:
+                status_badge = "🔒 ALREADY HELD"
+
+            all_equity_leaderboard.append({
+                "symbol": symbol,
+                "clean_symbol": clean_sym,
+                "momentum_6m": round(momentum_6m, 2),
+                "price": round(price, 2),
+                "rsi": round(rsi[-1], 1),
+                "quant_score": round(quant_score, 1),
+                "status_badge": status_badge
+            })
+
+            if is_uptrend and quant_score >= 70.0 and status_badge == "🟢 QUALIFIED (≥70)":
                 candidate_signals.append(signal_obj)
             else:
-                fallback_candidates.append(signal_obj)
+                print(f"⏩ Filtering out {symbol} (Quant Score {quant_score:.1f} < 70.0 - Low Win Expectancy)")
 
         except Exception as e:
             print(f"Error scanning {symbol}: {e}")
 
     candidate_signals.sort(key=lambda x: x['quant_score'], reverse=True)
-    if candidate_signals:
-        return candidate_signals[:TOP_SIGNALS_LIMIT]
-
-    print("ℹ️ Selecting top un-held outperforming momentum leaders dynamically...")
-    fallback_candidates.sort(key=lambda x: x['quant_score'], reverse=True)
-    return fallback_candidates[:TOP_SIGNALS_LIMIT]
+    all_equity_leaderboard.sort(key=lambda x: x['momentum_6m'], reverse=True)
+    return candidate_signals[:TOP_SIGNALS_LIMIT], all_equity_leaderboard
 
 def main():
     print("="*75)
@@ -190,11 +201,16 @@ def main():
     excluded_symbols = get_excluded_symbols()
     
     # 1. Equity Swing Scan (Exactly 2 Top Un-held Equity Candidates)
-    eq_signals = scan_top_5_high_probability_signals(open_positions_count=open_count, excluded_symbols=excluded_symbols)
+    eq_signals, full_eq_leaderboard = scan_top_5_high_probability_signals(open_positions_count=open_count, excluded_symbols=excluded_symbols)
     
     # 2. MCX Commodity Futures Scan (Exactly 2 Diversified Commodities)
     cmd_signals = run_commodity_agent_analysis()
     
+    # Save Full Daily Scan Results to SQLite for Web UI Leaderboard Tables
+    from src.commodity.commodity_agent import get_all_scanned_commodities
+    full_cmd_leaderboard = get_all_scanned_commodities()
+    save_daily_scan_results(full_eq_leaderboard, full_cmd_leaderboard)
+
     # 3. Dispatch EXACTLY 1 COMBINED Telegram Message (Zero Duplicates!)
     send_combined_clean_trade_cards(eq_signals, cmd_signals)
 
