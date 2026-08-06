@@ -106,16 +106,15 @@ def run_commodity_agent_analysis() -> list:
 
             macro_eval = evaluate_commodity_macro_sentiment(category, macro_flows['dxy_change_pct'])
 
-            # Comprehensive Multi-Factor Quant Score (70-95 Scale)
-            quant_score = 45.0  # Base institutional baseline
-            if is_uptrend: quant_score += 15.0
-            if is_above_ema: quant_score += 10.0
-            if is_pullback: quant_score += 10.0
-            if is_rsi_dip: quant_score += 10.0
-            quant_score += (macro_eval['score'] * 0.5)
+            # 100% Dynamic Multi-Factor Quant Score Engine (No Hardcoding)
+            quant_score = 30.0  # Base market participation score
+            if is_uptrend: quant_score += 25.0      # Primary 200-day Trend Alignment
+            if is_above_ema: quant_score += 15.0    # 20 EMA Short-term Momentum
+            if is_pullback: quant_score += 15.0     # Low-risk Entry Pullback Dip
+            if is_rsi_dip: quant_score += 10.0      # RSI Sweet Spot (40-65)
+            quant_score += (macro_eval['score'] * 0.5)  # Macro Flow Contribution
 
-            # Ensure Quant Score stays in realistic 70.0 - 95.0 high probability range
-            quant_score = round(max(65.0, min(94.5, quant_score)), 1)
+            quant_score = round(max(35.0, min(95.0, quant_score)), 1)
 
             atr_val = atr[-1]
             
