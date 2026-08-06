@@ -40,15 +40,6 @@ MCX_COMMODITY_UNIVERSE = [
         "approx_margin_inr": 12500.0,  # ~₹12,500 margin for 1 lot (Well within ₹20k)
         "min_capital": 15000.0,
         "lot_size": 1
-    },
-    {
-        "symbol": "CL=F",
-        "mcx_ticker": "CRUDEOILM",
-        "name": "Crude Oil Mini Futures",
-        "category": "ENERGY",
-        "approx_margin_inr": 13800.0,  # ~₹13,800 margin for 1 lot (Well within ₹20k)
-        "min_capital": 16000.0,
-        "lot_size": 1
     }
 ]
 
