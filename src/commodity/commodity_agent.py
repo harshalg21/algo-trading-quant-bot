@@ -112,44 +112,44 @@ def run_commodity_agent_analysis() -> list:
             if is_rsi_dip: quant_score += 15.0
             quant_score += macro_eval['score']
 
-            if quant_score >= 50.0:
-                atr_val = atr[-1]
-                
-                if used_upstox_feed:
-                    mcx_entry = round(price, 2)
-                    mcx_sl = round(price - (atr_val * 1.5), 2)
-                    mcx_tp = round(price + (atr_val * 1.5 * 2.5), 2)
-                else:
-                    spot_sl = price - (atr_val * 1.5)
-                    spot_tp = price + (atr_val * 1.5 * 2.5)
-                    mcx_entry = convert_spot_to_mcx_futures_price(global_sym, price, usd_inr)
-                    mcx_sl = convert_spot_to_mcx_futures_price(global_sym, spot_sl, usd_inr)
-                    mcx_tp = convert_spot_to_mcx_futures_price(global_sym, spot_tp, usd_inr)
+            atr_val = atr[-1]
+            
+            if used_upstox_feed:
+                mcx_entry = round(price, 2)
+                mcx_sl = round(price - (atr_val * 1.5), 2)
+                mcx_tp = round(price + (atr_val * 1.5 * 2.5), 2)
+            else:
+                spot_sl = price - (atr_val * 1.5)
+                spot_tp = price + (atr_val * 1.5 * 2.5)
+                mcx_entry = convert_spot_to_mcx_futures_price(global_sym, price, usd_inr)
+                mcx_sl = convert_spot_to_mcx_futures_price(global_sym, spot_sl, usd_inr)
+                mcx_tp = convert_spot_to_mcx_futures_price(global_sym, spot_tp, usd_inr)
 
-                max_risk_inr = COMMODITY_ACCOUNT_CAPITAL * (MAX_COMMODITY_RISK_PCT / 100.0)
-                risk_per_lot = abs(mcx_entry - mcx_sl)
-                
-                if risk_per_lot > 0:
-                    calc_lots = int(max_risk_inr / risk_per_lot)
-                    qty = max(1, min(calc_lots, int(COMMODITY_ACCOUNT_CAPITAL / approx_margin)))
-                else:
-                    qty = 1
+            max_risk_inr = COMMODITY_ACCOUNT_CAPITAL * (MAX_COMMODITY_RISK_PCT / 100.0)
+            risk_per_lot = abs(mcx_entry - mcx_sl)
+            
+            if risk_per_lot > 0:
+                calc_lots = int(max_risk_inr / risk_per_lot)
+                qty = max(1, min(calc_lots, int(COMMODITY_ACCOUNT_CAPITAL / approx_margin)))
+            else:
+                qty = 1
 
-                total_margin_req = approx_margin * qty
+            total_margin_req = approx_margin * qty
 
-                candidate_signals.append({
-                    "mcx_name": mcx_name,
-                    "mcx_ticker": mcx_ticker,
-                    "expiry_month": expiry_month,
-                    "mcx_entry_price": mcx_entry,
-                    "mcx_stop_loss": mcx_sl,
-                    "mcx_target": mcx_tp,
-                    "quantity": qty,
-                    "risk_amount": round(max_risk_inr, 2),
-                    "approx_margin": round(total_margin_req, 2),
-                    "quant_score": round(quant_score, 1),
-                    "macro_reason": macro_eval['reason']
-                })
+            candidate_signals.append({
+                "mcx_name": mcx_name,
+                "mcx_ticker": mcx_ticker,
+                "category": category,
+                "expiry_month": expiry_month,
+                "mcx_entry_price": mcx_entry,
+                "mcx_stop_loss": mcx_sl,
+                "mcx_target": mcx_tp,
+                "quantity": qty,
+                "risk_amount": round(max_risk_inr, 2),
+                "approx_margin": round(total_margin_req, 2),
+                "quant_score": round(quant_score, 1),
+                "macro_reason": macro_eval['reason']
+            })
 
         except Exception as e:
             print(f"Error analyzing {mcx_name}: {e}")
