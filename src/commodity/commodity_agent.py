@@ -140,20 +140,24 @@ def run_commodity_agent_analysis() -> list:
 
             total_margin_req = approx_margin * qty
 
-            candidate_signals.append({
-                "mcx_name": mcx_name,
-                "mcx_ticker": mcx_ticker,
-                "category": category,
-                "expiry_month": expiry_month,
-                "mcx_entry_price": mcx_entry,
-                "mcx_stop_loss": mcx_sl,
-                "mcx_target": mcx_tp,
-                "quantity": qty,
-                "risk_amount": round(max_risk_inr, 2),
-                "approx_margin": round(total_margin_req, 2),
-                "quant_score": round(quant_score, 1),
-                "macro_reason": macro_eval['reason']
-            })
+            # Strict Professional Risk Gate: Only include high-probability setups (Quant Score >= 70.0)
+            if quant_score >= 70.0:
+                candidate_signals.append({
+                    "mcx_name": mcx_name,
+                    "mcx_ticker": mcx_ticker,
+                    "category": category,
+                    "expiry_month": expiry_month,
+                    "mcx_entry_price": mcx_entry,
+                    "mcx_stop_loss": mcx_sl,
+                    "mcx_target": mcx_tp,
+                    "quantity": qty,
+                    "risk_amount": round(max_risk_inr, 2),
+                    "approx_margin": round(total_margin_req, 2),
+                    "quant_score": round(quant_score, 1),
+                    "macro_reason": macro_eval['reason']
+                })
+            else:
+                print(f"⏩ Filtering out {mcx_name} (Quant Score {quant_score:.1f} < 70.0 - Low Win Expectancy)")
 
         except Exception as e:
             print(f"Error analyzing {mcx_name}: {e}")
