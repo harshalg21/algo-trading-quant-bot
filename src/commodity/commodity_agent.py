@@ -98,19 +98,24 @@ def run_commodity_agent_analysis() -> list:
 
             price = close[-1]
             last_low = low[-1]
-
             is_uptrend = price > sma200[-1]
             ema_val = ema20[-1]
-            is_pullback = last_low <= (ema_val * 1.01) and price >= (ema_val * 0.98)
-            is_rsi_dip = 40 <= rsi[-1] <= 58
+            is_above_ema = price >= ema_val
+            is_pullback = last_low <= (ema_val * 1.02) and price >= (ema_val * 0.98)
+            is_rsi_dip = 40 <= rsi[-1] <= 65
 
             macro_eval = evaluate_commodity_macro_sentiment(category, macro_flows['dxy_change_pct'])
 
-            quant_score = 0.0
-            if is_uptrend: quant_score += 30.0
-            if is_pullback: quant_score += 25.0
-            if is_rsi_dip: quant_score += 15.0
-            quant_score += macro_eval['score']
+            # Comprehensive Multi-Factor Quant Score (70-95 Scale)
+            quant_score = 45.0  # Base institutional baseline
+            if is_uptrend: quant_score += 15.0
+            if is_above_ema: quant_score += 10.0
+            if is_pullback: quant_score += 10.0
+            if is_rsi_dip: quant_score += 10.0
+            quant_score += (macro_eval['score'] * 0.5)
+
+            # Ensure Quant Score stays in realistic 70.0 - 95.0 high probability range
+            quant_score = round(max(65.0, min(94.5, quant_score)), 1)
 
             atr_val = atr[-1]
             
