@@ -263,18 +263,16 @@ def render_dashboard(request: Request):
         <div class="grid-2">
             <div class="card">
                 <div class="panel-title">📊 SMART MONEY ASSET ALLOCATION</div>
-                <div style="margin-top: 12px; font-size: 14px; line-height: 1.8;">
-                    <div>• <b>NSE Equities</b>: <span style="color: #60a5fa;">49.1% Capital Flow</span></div>
-                    <div>• <b>MCX Energy (Crude)</b>: <span style="color: #f59e0b;">42.6% Capital Flow</span></div>
-                    <div>• <b>Gold & Silver</b>: <span style="color: #34d399;">8.3% Capital Flow</span></div>
+                <div id="smart-money-alloc-list" style="margin-top: 12px; font-size: 14px; line-height: 1.8;">
+                    <div>• <b>NSE Equities</b>: <span style="color: #60a5fa;">Loading...</span></div>
+                    <div>• <b>MCX Energy (Crude)</b>: <span style="color: #f59e0b;">Loading...</span></div>
+                    <div>• <b>Gold & Silver</b>: <span style="color: #34d399;">Loading...</span></div>
                 </div>
             </div>
             <div class="card">
                 <div class="panel-title">🏛️ TOP FII SECTOR TARGETS</div>
-                <div style="margin-top: 12px; font-size: 14px; line-height: 1.8;">
-                    <div>• <b>NIFTY PHARMA</b> (SUNPHARMA): 🔥 <span style="color: #34d399;">FII Accumulation (+16.4%)</span></div>
-                    <div>• <b>NIFTY REALTY/INFRA</b> (DLF/ADANI): 🔥 <span style="color: #60a5fa;">Buying Surge (+39.3%)</span></div>
-                    <div>• <b>NIFTY BANK</b> (BAJFINANCE/ICICI): ⭐ <span style="color: #fbbf24;">Solid Inflow (+20.3%)</span></div>
+                <div id="top-fii-sector-list" style="margin-top: 12px; font-size: 14px; line-height: 1.8;">
+                    <div>Loading outperforming sector targets...</div>
                 </div>
             </div>
         </div>
@@ -443,6 +441,25 @@ def render_dashboard(request: Request):
                     document.getElementById('margin-val').innerText = '₹' + margin.toLocaleString('en-IN', {minimumFractionDigits: 2});
                     document.getElementById('cash-val').innerText = '₹' + cash.toLocaleString('en-IN', {minimumFractionDigits: 2});
                     document.getElementById('fii-val').innerText = '₹' + (data.fii_net_cr >= 0 ? '+' : '') + data.fii_net_cr.toLocaleString('en-IN', {minimumFractionDigits: 2}) + ' Cr';
+
+                    // Hydrate Smart Money Asset Allocation Breakdown dynamically
+                    if (data.asset_allocation && data.asset_allocation.asset_allocation_pct) {
+                        const alloc = data.asset_allocation.asset_allocation_pct;
+                        const allocContainer = document.getElementById('smart-money-alloc-list');
+                        allocContainer.innerHTML = `
+                            <div>• <b>NSE Equities</b>: <span style="color: #60a5fa; font-weight: 600;">${alloc.EQUITY || 45.0}% Capital Flow</span></div>
+                            <div>• <b>MCX Energy (Crude)</b>: <span style="color: #f59e0b; font-weight: 600;">${alloc.ENERGY_CRUDE || 35.0}% Capital Flow</span></div>
+                            <div>• <b>Gold & Silver</b>: <span style="color: #34d399; font-weight: 600;">${alloc.GOLD_SILVER || 20.0}% Capital Flow</span></div>
+                        `;
+                    }
+
+                    // Hydrate Top FII Sector Targets dynamically
+                    if (data.asset_allocation && data.asset_allocation.sector_leaders) {
+                        const secContainer = document.getElementById('top-fii-sector-list');
+                        secContainer.innerHTML = data.asset_allocation.sector_leaders.map(sec => `
+                            <div>• <b>${sec.sector}</b> (${sec.leader_stock}): <span style="color: #34d399; font-weight: 600;">${sec.flow_status}</span></div>
+                        `).join('');
+                    }
 
                     if (data.journal_entries && data.journal_entries.length > 0) {
                         const tbody = document.getElementById('journal-rows');
