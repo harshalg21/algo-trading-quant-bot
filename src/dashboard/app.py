@@ -37,13 +37,14 @@ def get_dashboard_api_data():
     conn.close()
 
     total_margin_open = 0.0
+    clean_entries = []
     if not df_journal.empty:
-        open_df = df_journal[df_journal['status'].str.contains('OPEN|EXECUTED', case=False, na=False)]
+        open_df = df_journal[df_journal['status'].str.contains('OPEN|EXECUTED|SCHEDULED', case=False, na=False)]
         if not open_df.empty:
-            total_margin_open = float(open_df['margin_used'].sum())
+            total_margin_open = float(pd.to_numeric(open_df['margin_used'], errors='coerce').fillna(0.0).sum())
 
-    if total_margin_open == 0.0:
-        total_margin_open = 3984.75  # Active GOLDPETAL Position Margin
+        raw_records = df_journal.to_dict(orient="records")
+        clean_entries = [{k: (None if pd.isna(v) else v) for k, v in r.items()} for r in raw_records]
 
     macro_risk = evaluate_global_macro_risk()
     smart_money = get_institutional_smart_money_score()
@@ -58,7 +59,7 @@ def get_dashboard_api_data():
         "fii_net_cr": smart_money['fii_net_cr'],
         "pcr_ratio": smart_money.get('pcr', 1.28),
         "asset_allocation": asset_breakdown,
-        "journal_entries": df_journal.to_dict(orient="records")
+        "journal_entries": clean_entries
     }
 
 @app.get("/api/trade-details/{trade_id}")
