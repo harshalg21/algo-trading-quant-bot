@@ -154,7 +154,7 @@ def close_trade_in_journal(symbol: str, exit_price: float, notes: str = "Trade C
     conn = sqlite3.connect(JOURNAL_DB_PATH)
     cursor = conn.cursor()
     
-    cursor.execute("SELECT id, trade_type, entry_date, entry_price, quantity, margin_used FROM journal_entries WHERE symbol = ? AND status IN ('OPEN', 'EXECUTED')", (symbol,))
+    cursor.execute("SELECT id, trade_type, entry_date, entry_price, quantity, margin_used FROM journal_entries WHERE symbol = ? AND status IN ('OPEN', 'EXECUTED', 'CLOSED')", (symbol,))
     trade = cursor.fetchone()
     
     if trade:
@@ -219,9 +219,9 @@ def export_journal_to_markdown():
                 except Exception:
                     duration_str = "Active Holding"
 
-            net_pnl_str = f"₹{r['net_pnl']:+,.2f}" if r['net_pnl'] is not None else "-"
-            pnl_pct_str = f"{r['pnl_pct']:+,.2f}%" if r['pnl_pct'] is not None else "-"
-            exit_p_str = f"₹{r['exit_price']:,.2f}" if r['exit_price'] is not None else "-"
+            net_pnl_str = f"₹{r['net_pnl']:+,.2f}" if (r['net_pnl'] is not None and not pd.isna(r['net_pnl'])) else "-"
+            pnl_pct_str = f"{r['pnl_pct']:+,.2f}%" if (r['pnl_pct'] is not None and not pd.isna(r['pnl_pct'])) else "-"
+            exit_p_str = f"₹{r['exit_price']:,.2f}" if (r['exit_price'] is not None and not pd.isna(r['exit_price'])) else "-"
             charges_str = f"₹{r['upstox_charges']:,.2f}" if r['upstox_charges'] is not None else "₹0.00"
             
             if st == "SCHEDULED":

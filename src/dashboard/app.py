@@ -93,13 +93,16 @@ async def execute_trade_action(request: Request):
                 (float(new_target), f"Target updated to ₹{float(new_target):,.2f} via AI Dashboard", trade_id)
             )
         elif action_type == "CLOSE_TRADE":
-            cursor.execute(
-                "UPDATE journal_entries SET status = 'CLOSED', exit_date = ?, exit_price = ? WHERE id = ?;",
-                (datetime.now().strftime('%Y-%m-%d %H:%M'), float(body.get("exit_price") or 14845.00), trade_id)
-            )
+            cursor.execute("SELECT symbol FROM journal_entries WHERE id = ?;", (trade_id,))
+            row_sym = cursor.fetchone()
+            conn.close()
 
-        conn.commit()
-        conn.close()
+            if row_sym:
+                sym_to_close = row_sym[0]
+                exit_p = float(body.get("exit_price") or 14845.00)
+                from src.database.journal import close_trade_in_journal
+                close_trade_in_journal(sym_to_close, exit_p, "Closed via AI Dashboard")
+            return {"status": "SUCCESS", "message": f"Trade #{trade_id} closed successfully with full PnL calculation!"}
 
         export_journal_to_markdown()
         return {"status": "SUCCESS", "message": f"Action {action_type} executed for Trade #{trade_id}!"}
